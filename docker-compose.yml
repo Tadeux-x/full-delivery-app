@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+
+  # ── MySQL ──────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: comanda-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: comanda_digital
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Spring Boot API ────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: comanda-api
+    environment:
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/comanda_digital?useSSL=false&serverTimezone=America/Sao_Paulo
+      JWT_SECRET: c0mAnD@D1g1t4l-S3cr3t-K3y-2024-Spring-B00t-3-Jwt-512bits-Base
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Angular Frontend ───────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: comanda-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
